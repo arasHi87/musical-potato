@@ -1,5 +1,5 @@
 from config import settings
-from endpoints import health
+from endpoints import file, health
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.requests import Request
 from fastapi.responses import Response
@@ -14,6 +14,7 @@ APP = FastAPI(
 
 ROUTER = APIRouter()
 ROUTER.include_router(health.router, prefix="/health", tags=["health"])
+ROUTER.include_router(file.router, prefix="/file", tags=["file"])
 
 
 # Startup event
