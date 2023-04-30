@@ -13,6 +13,8 @@ python-dotenv = "0.21.0"
 fastapi = "0.85.0"
 uvicorn = {version = "0.18.3", extras = ["standard"]}
 loguru = "0.6.0"
+python-multipart = "0.0.6"
+numpy = "1.24.3"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "2.20.0"
