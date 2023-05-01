@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 import schemas
 from config import settings
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from loguru import logger
 
 
@@ -50,6 +50,11 @@ class Storage:
             f.write(data)
 
     async def save_file(self, file: UploadFile) -> schemas.File:
+        # check if file exists
+        if os.path.exists(os.path.join(self.block_path[2], file.filename)):
+            logger.warning(f"File already exists: {file.filename}")
+            raise HTTPException(status_code=409, detail="File already exists")
+
         data = await file.read()
         checksum = hashlib.md5(data).hexdigest()
 
