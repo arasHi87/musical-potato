@@ -18,3 +18,8 @@ async def create_file(file: UploadFile) -> schemas.File:
 @router.get("/", status_code=status.HTTP_200_OK, name="file:get_file")
 async def read_file(filename: str) -> str:
     return await storage.read_file(filename)
+
+
+@router.put("/", status_code=status.HTTP_200_OK, name="file:update_file")
+async def update_file(file: UploadFile) -> schemas.File:
+    return await storage.update_file(file)
