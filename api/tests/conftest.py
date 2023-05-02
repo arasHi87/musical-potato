@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import BinaryIO, Generator
 
 import pytest
+import schemas
 from app import APP
 from fastapi import UploadFile
 from fastapi.testclient import TestClient
@@ -16,14 +17,17 @@ def client() -> Generator:
 
 
 @pytest.fixture(scope="function")
-def file() -> Generator:
-    path = Path("/tmp") / DEFAULT_FILE.name
+def file(request) -> Generator:
+    # get file from marker if exists
+    file: schemas.File = DEFAULT_FILE[0]
+    marker = request.node.get_closest_marker("file_data")
+    if marker:
+        file = marker.args[0]
 
-    # delete file if exists
+    # create a file in tmp use to upload
+    path = Path("/tmp") / file.name
     path.unlink(missing_ok=True)
-
-    # create file and write data
-    path.write_text(DEFAULT_FILE.content)
+    path.write_text(file.content)
 
     # yield file
     with open(path, "rb") as fp:
