@@ -1,7 +1,7 @@
 import hashlib
 import os
 import shutil
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import schemas
@@ -49,15 +49,9 @@ class Storage:
         with open(path, "wb") as f:
             f.write(data)
 
-    async def save_file(self, file: UploadFile) -> schemas.File:
-        # check if file exists
-        if os.path.exists(os.path.join(self.block_path[2], file.filename)):
-            logger.warning(f"File already exists: {file.filename}")
-            raise HTTPException(status_code=409, detail="File already exists")
-
-        data = await file.read()
-        checksum = hashlib.md5(data).hexdigest()
-
+    async def __partition_data(
+        self, data: bytes
+    ) -> Tuple[List[np.ndarray], np.ndarray]:
         # divide block NUM_DISK-1 and get the maximum length of the block
         data_blocks = np.array_split(
             np.frombuffer(data, dtype=np.uint8), settings.NUM_DISKS - 1
@@ -75,6 +69,20 @@ class Storage:
         # calculate parity block
         for i in range(settings.NUM_DISKS - 1):
             parity_block ^= data_blocks[i]
+
+        return data_blocks, parity_block
+
+    async def save_file(self, file: UploadFile) -> schemas.File:
+        # check if file exists
+        if os.path.exists(os.path.join(self.block_path[2], file.filename)):
+            logger.warning(f"File already exists: {file.filename}")
+            raise HTTPException(status_code=409, detail="File already exists")
+
+        data = await file.read()
+        checksum = hashlib.md5(data).hexdigest()
+
+        # partition data to NUM_DISKS-1 blocks and a parity block
+        data_blocks, parity_block = await self.__partition_data(data)
 
         # write data and parity to disk
         for i in range(settings.NUM_DISKS - 1):
@@ -104,6 +112,31 @@ class Storage:
 
         # return data
         return b"".join(data_blocks[:-1]).decode(encoding="utf-8")
+
+    async def update_file(self, file: UploadFile) -> schemas.File:
+        # check if file exists
+        if not os.path.exists(os.path.join(self.block_path[2], file.filename)):
+            logger.warning(f"File not found: {file.filename}")
+            raise HTTPException(status_code=404, detail="File not found")
+
+        data = await file.read()
+        checksum = hashlib.md5(data).hexdigest()
+
+        # partition data to NUM_DISKS-1 blocks and a parity block
+        data_blocks, parity_block = await self.__partition_data(data)
+
+        # write data and parity to disk
+        for i in range(settings.NUM_DISKS - 1):
+            await self.__write_file(i, data_blocks[i], file.filename)
+        await self.__write_file(settings.NUM_DISKS - 1, parity_block, file.filename)
+
+        return schemas.File(
+            name=file.filename,
+            size=len(data),
+            checksum=checksum,
+            content=data.decode("utf-8"),
+            content_type=file.content_type,
+        )
 
 
 storage: Storage = Storage()
