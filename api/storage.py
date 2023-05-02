@@ -72,9 +72,12 @@ class Storage:
 
         return data_blocks, parity_block
 
+    def exists(self, filename: str) -> bool:
+        return os.path.exists(os.path.join(self.block_path[2], filename))
+
     async def save_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
-        if os.path.exists(os.path.join(self.block_path[2], file.filename)):
+        if self.exists(file.filename):
             logger.warning(f"File already exists: {file.filename}")
             raise HTTPException(status_code=409, detail="File already exists")
 
@@ -88,7 +91,6 @@ class Storage:
         for i in range(settings.NUM_DISKS - 1):
             await self.__write_file(i, data_blocks[i], file.filename)
         await self.__write_file(settings.NUM_DISKS - 1, parity_block, file.filename)
-
         return schemas.File(
             name=file.filename,
             size=len(data),
@@ -99,7 +101,7 @@ class Storage:
 
     async def read_file(self, filename: str) -> bytes:
         # check if file exists
-        if not os.path.exists(os.path.join(self.block_path[2], filename)):
+        if not self.exists(filename):
             logger.warning(f"File not found: {filename}")
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -115,7 +117,7 @@ class Storage:
 
     async def update_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
-        if not os.path.exists(os.path.join(self.block_path[2], file.filename)):
+        if not self.exists(file.filename):
             logger.warning(f"File not found: {file.filename}")
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -140,7 +142,7 @@ class Storage:
 
     async def delete_file(self, filename: str) -> None:
         # check if file exists
-        if not os.path.exists(os.path.join(self.block_path[2], filename)):
+        if not self.exists(filename):
             logger.warning(f"File not found: {filename}")
             raise HTTPException(status_code=404, detail="File not found")
 
