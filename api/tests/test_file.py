@@ -96,3 +96,28 @@ async def test_update_file_none_exists(file: BinaryIO) -> None:
     )
     resp = ResponseBody(status_code=404, body={"detail": "File not found"})
     await assert_request("put", req, resp)
+
+
+"""
+Test case for delete file endpoint
+@name file:delete_file
+@router delete /file/
+@status_code 200
+@response_model schemas.File
+"""
+
+
+async def test_delete_file_success() -> None:
+    req = RequestBody(
+        url="file:delete_file", body=None, params={"filename": DEFAULT_FILE[0].name}
+    )
+    resp = ResponseBody(status_code=200, body={"detail": "File deleted"})
+    await assert_request("delete", req, resp)
+
+
+async def test_delete_file_none_exists() -> None:
+    req = RequestBody(
+        url="file:delete_file", body=None, params={"filename": "non-exists.txt"}
+    )
+    resp = ResponseBody(status_code=404, body={"detail": "File not found"})
+    await assert_request("delete", req, resp)
