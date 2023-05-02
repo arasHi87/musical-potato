@@ -89,5 +89,21 @@ class Storage:
             content_type=file.content_type,
         )
 
+    async def read_file(self, filename: str) -> bytes:
+        # check if file exists
+        if not os.path.exists(os.path.join(self.block_path[2], filename)):
+            logger.warning(f"File not found: {filename}")
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # read data from disk
+        data_blocks = []
+        for i in range(settings.NUM_DISKS):
+            path = os.path.join(self.block_path[i], filename)
+            with open(path, "rb") as f:
+                data_blocks.append(f.read().rstrip(b"\x00"))
+
+        # return data
+        return b"".join(data_blocks[:-1]).decode(encoding="utf-8")
+
 
 storage: Storage = Storage()
