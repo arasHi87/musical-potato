@@ -19,6 +19,7 @@ DEFAULT_FILE = schemas.File(
 class RequestBody:
     url: URLPath
     body: Dict[str, Any]
+    params: Dict[str, Any] = None
     files: Union[Dict[str, Tuple[str, BinaryIO]], None] = None
 
 
