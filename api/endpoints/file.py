@@ -23,3 +23,9 @@ async def read_file(filename: str) -> str:
 @router.put("/", status_code=status.HTTP_200_OK, name="file:update_file")
 async def update_file(file: UploadFile) -> schemas.File:
     return await storage.update_file(file)
+
+
+@router.delete("/", status_code=status.HTTP_200_OK, name="file:delete_file")
+async def delete_file(filename: str) -> str:
+    await storage.delete_file(filename)
+    return schemas.Msg(detail="File deleted")
