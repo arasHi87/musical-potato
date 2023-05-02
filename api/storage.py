@@ -138,5 +138,16 @@ class Storage:
             content_type=file.content_type,
         )
 
+    async def delete_file(self, filename: str) -> None:
+        # check if file exists
+        if not os.path.exists(os.path.join(self.block_path[2], filename)):
+            logger.warning(f"File not found: {filename}")
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # delete all files, include data and parity
+        for i in range(settings.NUM_DISKS):
+            path = os.path.join(self.block_path[i], filename)
+            os.remove(path)
+
 
 storage: Storage = Storage()
