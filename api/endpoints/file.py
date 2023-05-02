@@ -13,3 +13,8 @@ router = APIRouter()
 )
 async def create_file(file: UploadFile) -> schemas.File:
     return await storage.save_file(file)
+
+
+@router.get("/", status_code=status.HTTP_200_OK, name="file:get_file")
+async def read_file(filename: str) -> str:
+    return await storage.read_file(filename)
