@@ -19,7 +19,7 @@ class ResponseBody:
 
 
 class AssertRequest:
-    def __call__(
+    async def __call__(
         self,
         tc: TestClient,
         method: str,
