@@ -23,7 +23,7 @@ class TestCreateFile:
         resp = ResponseBody(status_code=201, body=DEFAULT_FILE.dict())
         await assert_request("post", req, resp)
 
-    @pytest.mark.usefixtures("init_file")
+    @pytest.mark.usefixtures("create_file")
     async def test_create_file_duplicate(self, file: BinaryIO):
         req = RequestBody(
             url="file:create_file",
@@ -44,7 +44,7 @@ Test case for read file endpoint
 
 
 class TestReadFile:
-    @pytest.mark.usefixtures("init_file")
+    @pytest.mark.usefixtures("create_file")
     async def test_read_file_success(self):
         req = RequestBody(
             url="file:read_file", body=None, params={"filename": DEFAULT_FILE.name}
@@ -79,7 +79,7 @@ class TestUpdateFile:
     )
 
     @pytest.mark.file_data(EDITED_FILE)
-    @pytest.mark.usefixtures("init_file")
+    @pytest.mark.usefixtures("create_file")
     async def test_update_file_success(self, file: BinaryIO):
         req = RequestBody(
             url="file:update_file",
@@ -109,6 +109,7 @@ Test case for delete file endpoint
 
 
 class TestDeleteFile:
+    @pytest.mark.usefixtures("create_file")
     async def test_delete_file_success(self):
         req = RequestBody(
             url="file:delete_file", body=None, params={"filename": DEFAULT_FILE.name}
@@ -121,5 +122,4 @@ class TestDeleteFile:
             url="file:delete_file", body=None, params={"filename": "non-exists.txt"}
         )
         resp = ResponseBody(status_code=404, body={"detail": "File not found"})
-        await assert_request("delete", req, resp)
         await assert_request("delete", req, resp)
