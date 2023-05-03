@@ -1,8 +1,8 @@
 import hashlib
-import os
-import shutil
+from pathlib import Path
 from typing import List, Tuple
 
+import aiofiles
 import numpy as np
 import schemas
 from config import settings
@@ -12,42 +12,16 @@ from loguru import logger
 
 class Storage:
     def __init__(self):
-        self.storage_path = os.path.join(settings.UPLOAD_PATH, settings.FOLDER_PREFIX)
-        self.block_path: List[str] = [
-            f"{self.storage_path}-{i}" for i in range(settings.NUM_DISKS)
+        self.block_path: List[Path] = [
+            Path(settings.UPLOAD_PATH) / f"{settings.FOLDER_PREFIX}-{i}"
+            for i in range(settings.NUM_DISKS)
         ]
-        self.__create_storage_folder()
+        self.__create_block()
 
-    def __create_storage_folder(self):
-        # create 3 sub folders use to store file blocks
+    def __create_block(self):
         for path in self.block_path:
-            if not os.path.exists(path):
-                # create storage folder if not exists
-                logger.info(f"Creating storage folder: {path}")
-                os.makedirs(path)
-            else:
-                # clear storage folder if exists
-                logger.warning(f"Storage folder already exists: {path}")
-                self.__clear_folder(path)
-
-    def __clear_folder(self, folder: str):
-        logger.warning(f"Clearing folder: {folder}")
-
-        # clear folder
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except OSError as err:
-                logger.error(f"Failed to delete {file_path} because {err}")
-
-    async def __write_file(self, block: int, data: bytes, filename: str):
-        path = os.path.join(self.block_path[block], filename)
-        with open(path, "wb") as f:
-            f.write(data)
+            logger.warning(f"Creating folder: {path}")
+            path.mkdir(parents=True, exist_ok=True)
 
     async def __partition_data(
         self, data: bytes
@@ -70,27 +44,27 @@ class Storage:
         for i in range(settings.NUM_DISKS - 1):
             parity_block ^= data_blocks[i]
 
+        # return data_blocks and parity_block
+        # for the top NUM_DISKS-1 blocks are data blocks
+        # the last block is parity block
         return data_blocks, parity_block
 
-    def exists(self, filename: str) -> bool:
-        return os.path.exists(os.path.join(self.block_path[2], filename))
-
-    async def save_file(self, file: UploadFile) -> schemas.File:
-        # check if file exists
-        if self.exists(file.filename):
-            logger.warning(f"File already exists: {file.filename}")
-            raise HTTPException(status_code=409, detail="File already exists")
-
+    async def __write_file(self, file: UploadFile) -> schemas.File:
         data = await file.read()
         checksum = hashlib.md5(data).hexdigest()
 
         # partition data to NUM_DISKS-1 blocks and a parity block
         data_blocks, parity_block = await self.__partition_data(data)
 
-        # write data and parity to disk
-        for i in range(settings.NUM_DISKS - 1):
-            await self.__write_file(i, data_blocks[i], file.filename)
-        await self.__write_file(settings.NUM_DISKS - 1, parity_block, file.filename)
+        # write data to disk
+        # the top NUM_DISKS-1 blocks are data blocks
+        # the last block is parity block
+        data_blocks.append(parity_block)
+        for i in range(settings.NUM_DISKS):
+            path = self.block_path[i] / file.filename
+            async with aiofiles.open(path, "wb") as fp:
+                await fp.write(data_blocks[i])
+
         return schemas.File(
             name=file.filename,
             size=len(data),
@@ -99,57 +73,104 @@ class Storage:
             content_type=file.content_type,
         )
 
+    def __delete_file(self, filename: str, missing_ok: bool = False) -> None:
+        # delete all files, include data and parity
+        for i in range(settings.NUM_DISKS):
+            path = self.block_path[i] / filename
+            path.unlink(missing_ok=missing_ok)
+
+    def __parity_verify(
+        self, data_blocks: List[np.ndarray], parity_block: np.ndarray
+    ) -> bool:
+        # calculate parity block
+        verify_block = np.zeros((max(map(len, data_blocks)),), dtype=np.uint8)
+        for i in range(settings.NUM_DISKS - 1):
+            verify_block ^= data_blocks[i]
+
+        # check if parity block is equal to the last block
+        return np.array_equal(parity_block, verify_block)
+
+    def __file_exists(self, filename: str) -> bool:
+        # only check if file exists on all blocks
+        for i in range(settings.NUM_DISKS):
+            path = Path(self.block_path[i]) / filename
+            if not path.exists():
+                return False
+        return True
+
+    async def file_integrity(self, filename: str) -> bool:
+        """
+        file integrated must satisfy following conditions:
+            1. all data blocks must exist
+            2. size of all data blocks must be equal
+            3. parity block must exist
+            4. parity verify must success
+
+        if one of the above conditions is not satisfied
+        the file does not exist
+        and the file is considered to be damaged
+        so we need to delete the file
+        """
+
+        # check if all data blocks and parity block exist
+        if not self.__file_exists(filename):
+            self.__delete_file(filename, missing_ok=True)
+            return False
+
+        # read data from disk and store in data_blocks
+        data_blocks = []
+        for block in self.block_path:
+            async with aiofiles.open(block / filename, "rb") as fp:
+                data_blocks.append(np.frombuffer(await fp.read(), dtype=np.uint8))
+
+        # check if size of all data blocks is equal
+        if not all(len(data_blocks[0]) == len(block) for block in data_blocks):
+            self.__delete_file(filename)
+            return False
+
+        # check parity
+        if not self.__parity_verify(data_blocks[:-1], data_blocks[-1]):
+            self.__delete_file(filename)
+            return False
+
+        # file is integrated
+        return True
+
+    async def create_file(self, file: UploadFile) -> schemas.File:
+        # check if file exists
+        if await self.file_integrity(file.filename):
+            logger.warning(f"File already exists: {file.filename}")
+            raise HTTPException(status_code=409, detail="File already exists")
+        return await self.__write_file(file)
+
     async def read_file(self, filename: str) -> bytes:
         # check if file exists
-        if not self.exists(filename):
+        if not await self.file_integrity(filename):
             logger.warning(f"File not found: {filename}")
             raise HTTPException(status_code=404, detail="File not found")
 
         # read data from disk
         data_blocks = []
         for i in range(settings.NUM_DISKS):
-            path = os.path.join(self.block_path[i], filename)
-            with open(path, "rb") as f:
-                data_blocks.append(f.read().rstrip(b"\x00"))
+            path = self.block_path[i] / filename
+            data_blocks.append(path.read_bytes().rstrip(b"\x00"))
 
         # return data
         return b"".join(data_blocks[:-1]).decode(encoding="utf-8")
 
     async def update_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
-        if not self.exists(file.filename):
+        if not await self.file_integrity(file.filename):
             logger.warning(f"File not found: {file.filename}")
             raise HTTPException(status_code=404, detail="File not found")
-
-        data = await file.read()
-        checksum = hashlib.md5(data).hexdigest()
-
-        # partition data to NUM_DISKS-1 blocks and a parity block
-        data_blocks, parity_block = await self.__partition_data(data)
-
-        # write data and parity to disk
-        for i in range(settings.NUM_DISKS - 1):
-            await self.__write_file(i, data_blocks[i], file.filename)
-        await self.__write_file(settings.NUM_DISKS - 1, parity_block, file.filename)
-
-        return schemas.File(
-            name=file.filename,
-            size=len(data),
-            checksum=checksum,
-            content=data.decode("utf-8"),
-            content_type=file.content_type,
-        )
+        return await self.__write_file(file)
 
     async def delete_file(self, filename: str) -> None:
         # check if file exists
-        if not self.exists(filename):
+        if not await self.file_integrity(filename):
             logger.warning(f"File not found: {filename}")
             raise HTTPException(status_code=404, detail="File not found")
-
-        # delete all files, include data and parity
-        for i in range(settings.NUM_DISKS):
-            path = os.path.join(self.block_path[i], filename)
-            os.remove(path)
+        self.__delete_file(filename)
 
 
 storage: Storage = Storage()
