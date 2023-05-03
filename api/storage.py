@@ -1,4 +1,5 @@
 import hashlib
+import sys
 from pathlib import Path
 from typing import List, Tuple
 
@@ -11,9 +12,10 @@ from loguru import logger
 
 
 class Storage:
-    def __init__(self):
+    def __init__(self, is_test: bool):
         self.block_path: List[Path] = [
-            Path(settings.UPLOAD_PATH) / f"{settings.FOLDER_PREFIX}-{i}"
+            Path(settings.UPLOAD_PATH)
+            / f"{settings.FOLDER_PREFIX}-{i}{'-test' if is_test else ''}"
             for i in range(settings.NUM_DISKS)
         ]
         self.__create_block()
@@ -173,6 +175,8 @@ class Storage:
         self.__delete_file(filename)
 
     async def fix_block(self, block_id: int) -> None:
+        self.__create_block()
+
         # choose a base block to get all files
         base_id = 0 if block_id != 0 else 1
         files = [file for file in self.block_path[base_id].iterdir() if file.is_file()]
@@ -198,4 +202,4 @@ class Storage:
                 await fp.write(fix_block)
 
 
-storage: Storage = Storage()
+storage: Storage = Storage(is_test="pytest" in sys.modules)
