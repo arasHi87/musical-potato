@@ -2,6 +2,7 @@ import hashlib
 from pathlib import Path
 from typing import List, Tuple
 
+import aiofiles
 import numpy as np
 import schemas
 from config import settings
@@ -61,7 +62,8 @@ class Storage:
         data_blocks.append(parity_block)
         for i in range(settings.NUM_DISKS):
             path = self.block_path[i] / file.filename
-            path.write_bytes(data_blocks[i])
+            async with aiofiles.open(path, "wb") as fp:
+                await fp.write(data_blocks[i])
 
         return schemas.File(
             name=file.filename,
