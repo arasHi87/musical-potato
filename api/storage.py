@@ -102,8 +102,9 @@ class Storage:
         """
         file integrated must satisfy following conditions:
             1. all data blocks must exist
-            2. parity block must exist
-            3. parity verify must success
+            2. size of all data blocks must be equal
+            3. parity block must exist
+            4. parity verify must success
 
         if one of the above conditions is not satisfied
         the file does not exist
@@ -116,11 +117,18 @@ class Storage:
             self.__delete_file(filename, missing_ok=True)
             return False
 
-        # read data from disk and check parity
+        # read data from disk and store in data_blocks
         data_blocks = []
         for block in self.block_path:
             async with aiofiles.open(block / filename, "rb") as fp:
                 data_blocks.append(np.frombuffer(await fp.read(), dtype=np.uint8))
+
+        # check if size of all data blocks is equal
+        if not all(len(data_blocks[0]) == len(block) for block in data_blocks):
+            self.__delete_file(filename)
+            return False
+
+        # check parity
         if not self.__parity_verify(data_blocks[:-1], data_blocks[-1]):
             self.__delete_file(filename)
             return False
