@@ -73,20 +73,71 @@ class Storage:
             content_type=file.content_type,
         )
 
-    def exists(self, filename: str) -> bool:
-        path = Path(self.block_path[0]) / filename
-        return path.exists()
+    def __delete_file(self, filename: str, missing_ok: bool = False) -> None:
+        # delete all files, include data and parity
+        for i in range(settings.NUM_DISKS):
+            path = self.block_path[i] / filename
+            path.unlink(missing_ok=missing_ok)
+
+    def __parity_verify(
+        self, data_blocks: List[np.ndarray], parity_block: np.ndarray
+    ) -> bool:
+        # calculate parity block
+        verify_block = np.zeros((max(map(len, data_blocks)),), dtype=np.uint8)
+        for i in range(settings.NUM_DISKS - 1):
+            verify_block ^= data_blocks[i]
+
+        # check if parity block is equal to the last block
+        return np.array_equal(parity_block, verify_block)
+
+    def __file_exists(self, filename: str) -> bool:
+        # only check if file exists on all blocks
+        for i in range(settings.NUM_DISKS):
+            path = Path(self.block_path[i]) / filename
+            if not path.exists():
+                return False
+        return True
+
+    async def file_integrity(self, filename: str) -> bool:
+        """
+        file integrated must satisfy following conditions:
+            1. all data blocks must exist
+            2. parity block must exist
+            3. parity verify must success
+
+        if one of the above conditions is not satisfied
+        the file does not exist
+        and the file is considered to be damaged
+        so we need to delete the file
+        """
+
+        # check if all data blocks and parity block exist
+        if not self.__file_exists(filename):
+            self.__delete_file(filename, missing_ok=True)
+            return False
+
+        # read data from disk and check parity
+        data_blocks = []
+        for block in self.block_path:
+            async with aiofiles.open(block / filename, "rb") as fp:
+                data_blocks.append(np.frombuffer(await fp.read(), dtype=np.uint8))
+        if not self.__parity_verify(data_blocks[:-1], data_blocks[-1]):
+            self.__delete_file(filename)
+            return False
+
+        # file is integrated
+        return True
 
     async def save_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
-        if self.exists(file.filename):
+        if await self.file_integrity(file.filename):
             logger.warning(f"File already exists: {file.filename}")
             raise HTTPException(status_code=409, detail="File already exists")
         return await self.__write_file(file)
 
     async def read_file(self, filename: str) -> bytes:
         # check if file exists
-        if not self.exists(filename):
+        if not await self.file_integrity(filename):
             logger.warning(f"File not found: {filename}")
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -101,21 +152,17 @@ class Storage:
 
     async def update_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
-        if not self.exists(file.filename):
+        if not await self.file_integrity(file.filename):
             logger.warning(f"File not found: {file.filename}")
             raise HTTPException(status_code=404, detail="File not found")
         return await self.__write_file(file)
 
     async def delete_file(self, filename: str) -> None:
         # check if file exists
-        if not self.exists(filename):
+        if not await self.file_integrity(filename):
             logger.warning(f"File not found: {filename}")
             raise HTTPException(status_code=404, detail="File not found")
-
-        # delete all files, include data and parity
-        for i in range(settings.NUM_DISKS):
-            path = self.block_path[i] / filename
-            path.unlink()
+        self.__delete_file(filename)
 
 
 storage: Storage = Storage()
