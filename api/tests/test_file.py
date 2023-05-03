@@ -1,6 +1,7 @@
 from typing import BinaryIO
 
 import pytest
+import schemas
 from tests import DEFAULT_FILE, RequestBody, ResponseBody, assert_request
 
 """
@@ -19,7 +20,7 @@ class TestCreateFile:
             body=None,
             files={"file": ("m3ow87.txt", file, "text/plain")},
         )
-        resp = ResponseBody(status_code=201, body=DEFAULT_FILE[0].dict())
+        resp = ResponseBody(status_code=201, body=DEFAULT_FILE.dict())
         await assert_request("post", req, resp)
 
     @pytest.mark.usefixtures("init_file")
@@ -46,9 +47,9 @@ class TestReadFile:
     @pytest.mark.usefixtures("init_file")
     async def test_read_file_success(self):
         req = RequestBody(
-            url="file:read_file", body=None, params={"filename": DEFAULT_FILE[0].name}
+            url="file:read_file", body=None, params={"filename": DEFAULT_FILE.name}
         )
-        resp = ResponseBody(status_code=200, body=DEFAULT_FILE[0].content)
+        resp = ResponseBody(status_code=200, body=DEFAULT_FILE.content)
         await assert_request("get", req, resp)
 
     async def test_read_file_none_exists(self):
@@ -69,7 +70,15 @@ Test case for update file endpoint
 
 
 class TestUpdateFile:
-    @pytest.mark.file_data(DEFAULT_FILE[1])
+    EDITED_FILE: schemas.File = schemas.File(
+        name="m3ow87.txt",
+        size=29,
+        checksum="ffa812690ae8afb4e6c651190a24b275",
+        content="Let's M3ow M3ow M3ow All Day!",
+        content_type="text/plain",
+    )
+
+    @pytest.mark.file_data(EDITED_FILE)
     @pytest.mark.usefixtures("init_file")
     async def test_update_file_success(self, file: BinaryIO):
         req = RequestBody(
@@ -77,7 +86,7 @@ class TestUpdateFile:
             body=None,
             files={"file": ("m3ow87.txt", file, "text/plain")},
         )
-        resp = ResponseBody(status_code=200, body=DEFAULT_FILE[1].dict())
+        resp = ResponseBody(status_code=200, body=self.EDITED_FILE.dict())
         await assert_request("put", req, resp)
 
     async def test_update_file_none_exists(self, file: BinaryIO):
@@ -102,7 +111,7 @@ Test case for delete file endpoint
 class TestDeleteFile:
     async def test_delete_file_success(self):
         req = RequestBody(
-            url="file:delete_file", body=None, params={"filename": DEFAULT_FILE[0].name}
+            url="file:delete_file", body=None, params={"filename": DEFAULT_FILE.name}
         )
         resp = ResponseBody(status_code=200, body={"detail": "File deleted"})
         await assert_request("delete", req, resp)
@@ -112,4 +121,5 @@ class TestDeleteFile:
             url="file:delete_file", body=None, params={"filename": "non-exists.txt"}
         )
         resp = ResponseBody(status_code=404, body={"detail": "File not found"})
+        await assert_request("delete", req, resp)
         await assert_request("delete", req, resp)

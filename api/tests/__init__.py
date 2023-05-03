@@ -6,25 +6,13 @@ from app import APP
 from httpx import AsyncClient, Response
 from starlette.datastructures import URLPath
 
-# provide several default files for testing
-# 0: is the base file use to do common CRUD operation
-# 1: is the file use to test update
-DEFAULT_FILE: List[schemas.File] = [
-    schemas.File(
-        name="m3ow87.txt",
-        size=26,
-        checksum="d44d11c472f88a15737ae8eee2247231",
-        content="Do U Want To Meow With Me?",
-        content_type="text/plain",
-    ),
-    schemas.File(
-        name="m3ow87.txt",
-        size=29,
-        checksum="ffa812690ae8afb4e6c651190a24b275",
-        content="Let's M3ow M3ow M3ow All Day!",
-        content_type="text/plain",
-    ),
-]
+DEFAULT_FILE: schemas.File = schemas.File(
+    name="m3ow87.txt",
+    size=26,
+    checksum="d44d11c472f88a15737ae8eee2247231",
+    content="Do U Want To Meow With Me?",
+    content_type="text/plain",
+)
 
 
 @dataclass

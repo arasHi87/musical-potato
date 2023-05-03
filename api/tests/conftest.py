@@ -19,7 +19,7 @@ def client() -> Generator:
 @pytest.fixture(scope="function")
 def file(request) -> Generator:
     # get file from marker if exists
-    file: schemas.File = DEFAULT_FILE[0]
+    file: schemas.File = DEFAULT_FILE
     marker = request.node.get_closest_marker("file_data")
     if marker:
         file = marker.args[0]
