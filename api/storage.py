@@ -172,5 +172,30 @@ class Storage:
             raise HTTPException(status_code=404, detail="File not found")
         self.__delete_file(filename)
 
+    async def fix_block(self, block_id: int) -> None:
+        # choose a base block to get all files
+        base_id = 0 if block_id != 0 else 1
+        files = [file for file in self.block_path[base_id].iterdir() if file.is_file()]
+
+        # fix block by calculating parity block
+        for file in files:
+            # read data from disk
+            data_blocks: List[np.ndarray] = []
+            for i in range(settings.NUM_DISKS):
+                if i != block_id:
+                    path = self.block_path[i] / file.name
+                    data_blocks.append(np.frombuffer(path.read_bytes(), dtype=np.uint8))
+
+            # use rest of block to calculate missing block
+            max_length = max(map(len, data_blocks))
+            fix_block = np.zeros((max_length,), dtype=np.uint8)
+            for block in data_blocks:
+                fix_block ^= block
+
+            # write the data back to missing block
+            path = self.block_path[block_id] / file.name
+            async with aiofiles.open(path, "wb") as fp:
+                await fp.write(fix_block)
+
 
 storage: Storage = Storage()
