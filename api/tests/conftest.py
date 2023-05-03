@@ -44,4 +44,4 @@ async def init_file(file: BinaryIO) -> None:
     # delete file if exists to make sure we have a clean state
     if await storage.file_integrity(upload_file.filename):
         await storage.delete_file(upload_file.filename)
-    await storage.save_file(upload_file)
+    await storage.create_file(upload_file)

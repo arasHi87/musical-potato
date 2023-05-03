@@ -128,7 +128,7 @@ class Storage:
         # file is integrated
         return True
 
-    async def save_file(self, file: UploadFile) -> schemas.File:
+    async def create_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
         if await self.file_integrity(file.filename):
             logger.warning(f"File already exists: {file.filename}")
