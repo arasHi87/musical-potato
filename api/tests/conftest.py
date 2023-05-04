@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from typing import BinaryIO, Generator
 
@@ -34,14 +35,20 @@ def file(request) -> Generator:
         yield fp
 
 
+@pytest.fixture(autouse=True)
+def clean_env():
+    for path in storage.block_path:
+        for child in path.glob("*"):
+            if child.is_file():
+                child.unlink()
+            else:
+                shutil.rmtree(child)
+
+
 @pytest.fixture()
-async def init_file(file: BinaryIO) -> None:
+async def create_file(file: BinaryIO) -> None:
     # create a file to be used for testing duplicate
     upload_file = UploadFile(
         filename="m3ow87.txt", file=file, content_type="text/plain"
     )
-
-    # delete file if exists to make sure we have a clean state
-    if await storage.file_integrity(upload_file.filename):
-        await storage.delete_file(upload_file.filename)
     await storage.create_file(upload_file)
