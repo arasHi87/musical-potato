@@ -15,8 +15,9 @@ from loguru import logger
 class Storage:
     def __init__(self, is_test: bool):
         self.block_path: List[Path] = [
-            Path(settings.UPLOAD_PATH)
-            / f"{settings.FOLDER_PREFIX}-{i}{'-test' if is_test else ''}"
+            Path("/tmp") / f"{settings.FOLDER_PREFIX}-{i}-test"
+            if is_test
+            else Path(settings.UPLOAD_PATH) / f"{settings.FOLDER_PREFIX}-{i}"
             for i in range(settings.NUM_DISKS)
         ]
         self.__create_block()
