@@ -33,6 +33,15 @@ class TestCreateFile:
         resp = ResponseBody(status_code=409, body={"detail": "File already exists"})
         await assert_request("post", req, resp)
 
+    async def test_create_file_too_large(self, large_file: BinaryIO):
+        req = RequestBody(
+            url="file:create_file",
+            body=None,
+            files={"file": ("large_file.txt", large_file, "text/plain")},
+        )
+        resp = ResponseBody(status_code=413, body={"detail": "File too large"})
+        await assert_request("post", req, resp)
+
 
 """
 Test case for read file endpoint
@@ -96,6 +105,16 @@ class TestUpdateFile:
             files={"file": ("non-exists.txt", file, "text/plain")},
         )
         resp = ResponseBody(status_code=404, body={"detail": "File not found"})
+        await assert_request("put", req, resp)
+
+    @pytest.mark.usefixtures("create_file")
+    async def test_update_file_too_large(self, large_file: BinaryIO):
+        req = RequestBody(
+            url="file:update_file",
+            body=None,
+            files={"file": ("m3ow87.txt", large_file, "text/plain")},
+        )
+        resp = ResponseBody(status_code=413, body={"detail": "File too large"})
         await assert_request("put", req, resp)
 
 

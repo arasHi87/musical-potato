@@ -54,6 +54,8 @@ class Storage:
     async def __write_file(self, file: UploadFile) -> schemas.File:
         data = await file.read()
         checksum = hashlib.md5(data).hexdigest()
+        if len(data) > settings.MAX_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
 
         # partition data to NUM_DISKS-1 blocks and a parity block
         data_blocks, parity_block = await self.__partition_data(data)
