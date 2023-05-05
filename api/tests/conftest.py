@@ -5,6 +5,7 @@ from typing import BinaryIO, Generator
 import pytest
 import schemas
 from app import APP
+from config import settings
 from fastapi import UploadFile
 from fastapi.testclient import TestClient
 from storage import storage
@@ -29,6 +30,22 @@ def file(request) -> Generator:
     path = Path("/tmp") / file.name
     path.unlink(missing_ok=True)
     path.write_text(file.content)
+
+    # yield file
+    with open(path, "rb") as fp:
+        yield fp
+
+
+@pytest.fixture(scope="function")
+def large_file() -> Generator:
+    # create a file in tmp use to upload
+    path = Path("/tmp") / "large_file.txt"
+    path.unlink(missing_ok=True)
+
+    # write 100MB + 1 byte to file
+    with open(path, "wb") as fp:
+        fp.seek(settings.MAX_SIZE)
+        fp.write(b"\x6d\x65\x6f\x77\x38\x37")
 
     # yield file
     with open(path, "rb") as fp:

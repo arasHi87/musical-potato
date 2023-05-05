@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     UPLOAD_PATH: str = "/tmp"
     FOLDER_PREFIX: str = "block"
     NUM_DISKS: int = 5
+    MAX_SIZE: int = 1024 * 1024 * 100  # 100MB
 
 
 settings = Settings()
