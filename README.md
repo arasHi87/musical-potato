@@ -51,3 +51,27 @@ Black, isort, flake8, and pylint are used for formatting and linting in this pro
 ```
 make lint format
 ```
+
+### Develope
+
+#### Swagger
+
+FastAPI provides Swagger, an interactive API documentation and exploration web user interface that can be accessed at `http://localhost:8000/docs`.
+
+![](imgs/swagger.png)
+
+#### Environment variable
+
+The application will retrieve the setting variables from the environment, and if they are not found, it will retrieve the default variables from `api/config.py`.
+
+| Name          | Default | Comment                                                            |
+| ------------- | ------- | ------------------------------------------------------------------ |
+| UPLOAD_PATH   | /tmp    | the path where file should be placed                               |
+| FOLDER_PREFIX | block   | the storage folder prefix will be combined with `UPLOAD_PATH`.     |
+| NUM_DISKS     | 5       | how many disk should simulate, the value should be between 3 to 10 |
+
+### Reference
+
+- [tiangolo/fastapi](https://fastapi.tiangolo.com)
+- [arashi87/FastAPI-Template](https://github.com/arasHi87/FastAPI-Template)
+- [DarkbordermanTemplate/fastapi](https://github.com/DarkbordermanTemplate/fastapi)
