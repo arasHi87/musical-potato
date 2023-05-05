@@ -1,8 +1,8 @@
 ##############################
 # APP environment setting    #
 ##############################
-APP_TITLE=storage interface implement
-APP_DESCRIPTION=Implement a simple RAID 5 storage web interface
+APP_TITLE=RAID 3 Storage System
+APP_DESCRIPTION=Implement a simple web interface for the RAID 3 storage system.
 APP_VERSION=0.1.0
 APP_OPENAPI_URL=/openapi.json
 APP_PREFIX=/api
