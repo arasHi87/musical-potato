@@ -64,11 +64,12 @@ FastAPI provides Swagger, an interactive API documentation and exploration web u
 
 The application will retrieve the setting variables from the environment, and if they are not found, it will retrieve the default variables from `api/config.py`.
 
-| Name          | Default | Comment                                                            |
-| ------------- | ------- | ------------------------------------------------------------------ |
-| UPLOAD_PATH   | /tmp    | the path where file should be placed                               |
-| FOLDER_PREFIX | block   | the storage folder prefix will be combined with `UPLOAD_PATH`.     |
-| NUM_DISKS     | 5       | how many disk should simulate, the value should be between 3 to 10 |
+| Name          | Default   | Comment                                                             |
+| ------------- | --------- | ------------------------------------------------------------------- |
+| UPLOAD_PATH   | /tmp      | the path where file should be placed.                               |
+| FOLDER_PREFIX | block     | the storage folder prefix will be combined with `UPLOAD_PATH`.      |
+| NUM_DISKS     | 5         | how many disk should simulate, the value should be between 3 to 10. |
+| MAX_SIZE      | 104857600 | the max file size that can be upload, default is 100 MB.            |
 
 ### Reference
 
