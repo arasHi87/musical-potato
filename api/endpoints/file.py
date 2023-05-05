@@ -1,5 +1,7 @@
+import urllib.parse
+
 import schemas
-from fastapi import APIRouter, UploadFile, status
+from fastapi import APIRouter, Response, UploadFile, status
 from storage import storage
 
 router = APIRouter()
@@ -15,9 +17,15 @@ async def create_file(file: UploadFile) -> schemas.File:
     return await storage.create_file(file)
 
 
-@router.get("/", status_code=status.HTTP_200_OK, name="file:read_file")
-async def read_file(filename: str) -> str:
-    return await storage.read_file(filename)
+@router.get("/", status_code=status.HTTP_200_OK, name="file:retrieve_file")
+async def retrieve_file(filename: str) -> Response:
+    return Response(
+        await storage.retrieve_file(filename),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{urllib.parse.quote_plus(filename)}"
+        },
+    )
 
 
 @router.put("/", status_code=status.HTTP_200_OK, name="file:update_file")
