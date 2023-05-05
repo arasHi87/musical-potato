@@ -3,6 +3,7 @@ from typing import BinaryIO
 
 import pytest
 import schemas
+from httpx import Response
 from tests import DEFAULT_FILE, RequestBody, ResponseBody, assert_request
 
 """
@@ -51,26 +52,30 @@ class TestCreateFile:
 
 
 """
-Test case for read file endpoint
-@name file:read_file
+Test case for retrieve file endpoint
+@name file:retrieve_file
 @router get /file/
 @status_code 200
 @response_model str
 """
 
 
-class TestReadFile:
+class TestRetrieveFile:
+    def __assert_func(self, resp: Response, resp_body: ResponseBody):
+        assert resp.status_code == resp_body.status_code
+        assert resp.content.decode() == resp_body.body
+
     @pytest.mark.usefixtures("create_file")
-    async def test_read_file_success(self):
+    async def test_retrieve_file_success(self):
         req = RequestBody(
-            url="file:read_file", body=None, params={"filename": DEFAULT_FILE.name}
+            url="file:retrieve_file", body=None, params={"filename": DEFAULT_FILE.name}
         )
         resp = ResponseBody(status_code=200, body=DEFAULT_FILE.content)
-        await assert_request("get", req, resp)
+        await assert_request("get", req, resp, self.__assert_func)
 
-    async def test_read_file_none_exists(self):
+    async def test_retrieve_file_none_exists(self):
         req = RequestBody(
-            url="file:read_file", body=None, params={"filename": "non-exists.txt"}
+            url="file:retrieve_file", body=None, params={"filename": "non-exists.txt"}
         )
         resp = ResponseBody(status_code=404, body={"detail": "File not found"})
         await assert_request("get", req, resp)

@@ -25,5 +25,5 @@ class TestFixFile:
 
         # fix the block and check if the content is correct
         await storage.fix_block(block_id)
-        content = await storage.read_file(DEFAULT_FILE.name)
-        assert content == DEFAULT_FILE.content
+        content = await storage.retrieve_file(DEFAULT_FILE.name)
+        assert content.decode() == DEFAULT_FILE.content

@@ -148,7 +148,7 @@ class Storage:
             raise HTTPException(status_code=409, detail="File already exists")
         return await self.__write_file(file)
 
-    async def read_file(self, filename: str) -> bytes:
+    async def retrieve_file(self, filename: str) -> bytes:
         # check if file exists
         if not await self.file_integrity(filename):
             logger.warning(f"File not found: {filename}")
@@ -161,7 +161,7 @@ class Storage:
             data_blocks.append(path.read_bytes().rstrip(b"\x00"))
 
         # return data
-        return b"".join(data_blocks[:-1]).decode(encoding="utf-8")
+        return b"".join(data_blocks[:-1])
 
     async def update_file(self, file: UploadFile) -> schemas.File:
         # check if file exists
