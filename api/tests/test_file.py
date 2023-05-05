@@ -1,3 +1,4 @@
+import base64
 from typing import BinaryIO
 
 import pytest
@@ -20,7 +21,13 @@ class TestCreateFile:
             body=None,
             files={"file": ("m3ow87.txt", file, "text/plain")},
         )
-        resp = ResponseBody(status_code=201, body=DEFAULT_FILE.dict())
+        resp = ResponseBody(
+            status_code=201,
+            body={
+                **DEFAULT_FILE.dict(),
+                **{"content": base64.b64encode(DEFAULT_FILE.content.encode()).decode()},
+            },
+        )
         await assert_request("post", req, resp)
 
     @pytest.mark.usefixtures("create_file")
@@ -95,7 +102,17 @@ class TestUpdateFile:
             body=None,
             files={"file": ("m3ow87.txt", file, "text/plain")},
         )
-        resp = ResponseBody(status_code=200, body=self.EDITED_FILE.dict())
+        resp = ResponseBody(
+            status_code=200,
+            body={
+                **self.EDITED_FILE.dict(),
+                **{
+                    "content": base64.b64encode(
+                        self.EDITED_FILE.content.encode()
+                    ).decode()
+                },
+            },
+        )
         await assert_request("put", req, resp)
 
     async def test_update_file_none_exists(self, file: BinaryIO):

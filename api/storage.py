@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import sys
 from pathlib import Path
@@ -73,7 +74,7 @@ class Storage:
             name=file.filename,
             size=len(data),
             checksum=checksum,
-            content=data.decode("utf-8"),
+            content=base64.b64encode(data),
             content_type=file.content_type,
         )
 
