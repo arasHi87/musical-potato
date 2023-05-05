@@ -4,7 +4,7 @@ APP = api
 
 init: clean
 	cp env-sample .env
-	poetry env use $(which python3.8)
+	poetry env use $(which python3)
 	poetry install 
 
 lint:
