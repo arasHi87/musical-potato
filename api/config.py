@@ -16,7 +16,6 @@ class Settings(BaseSettings):
     APP_PREFIX: str = "/api"
 
     """File storage configuration"""
-    MAX_SIZE: int = 5 * 1024 * 1024  # 5MB
     UPLOAD_PATH: str = "/tmp"
     FOLDER_PREFIX: str = "block"
     NUM_DISKS: int = 5
