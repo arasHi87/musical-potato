@@ -5,7 +5,6 @@ description = "A simple CRUD web template for system admin homework"
 authors = ["arashi87 <arasi27676271@gmail.com>"]
 license = "MIT License"
 readme = "README.md"
-packages = [{include = "system_admin_homework_template"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
