@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.post(
     "/{block_id}",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
     response_model=schemas.Msg,
     name="fix:fix_block",
 )
