@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  delivery:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Repository checkout
+        uses: actions/checkout@v2
+
+      - name: Login to Github Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish container image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ghcr.io/arashi87/musical-potato:latest
+
+      - uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: latest
+          prerelease: true
+          title: Latest Build
