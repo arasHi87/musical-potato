@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+  musical-potato:
+    container_name: musical-potato
+    build: .
+    image: musical-potato:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+  
